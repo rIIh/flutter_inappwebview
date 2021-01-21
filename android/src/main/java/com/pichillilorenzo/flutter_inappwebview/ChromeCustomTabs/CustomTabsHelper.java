@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Log;
@@ -12,6 +13,8 @@ import android.util.Log;
 import androidx.browser.customtabs.CustomTabsService;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -23,6 +26,7 @@ public class CustomTabsHelper {
     static final String BETA_PACKAGE = "com.chrome.beta";
     static final String DEV_PACKAGE = "com.chrome.dev";
     static final String LOCAL_PACKAGE = "com.google.android.apps.chrome";
+    private static final String[] CHROME_PACKAGES = new String[]{STABLE_PACKAGE, BETA_PACKAGE, DEV_PACKAGE, LOCAL_PACKAGE};
     protected static final String EXTRA_CUSTOM_TABS_KEEP_ALIVE =
             "android.support.customtabs.extra.KEEP_ALIVE";
 
@@ -69,6 +73,22 @@ public class CustomTabsHelper {
                 packagesSupportingCustomTabs.add(info.activityInfo.packageName);
             }
         }
+
+        // Another way
+        Intent serviceIntent = new Intent("android.support.customtabs.action.CustomTabsService");
+        List<ResolveInfo> resolveInfos = context.getPackageManager().queryIntentServices(serviceIntent, 0);
+        if (resolveInfos != null) {
+            var chromePackages = new HashSet<>(Arrays.asList(CHROME_PACKAGES));
+
+            for (ResolveInfo resolveInfo : resolveInfos) {
+                ServiceInfo serviceInfo = resolveInfo.serviceInfo;
+                if (serviceInfo != null && chromePackages.contains(serviceInfo.packageName)) {
+                    sPackageNameToUse = serviceInfo.packageName;
+                    return sPackageNameToUse;
+                }
+            }
+        }
+        // End another way
 
         // Now packagesSupportingCustomTabs contains all apps that can handle both VIEW intents
         // and service calls.
